@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Event Ticketing</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <nav>
+      <h1>🎫 Campus Events</h1>
+      <div class="nav-links">
+        <button onclick="showView('events')" id="nav-events">Events</button>
+        <button onclick="showView('my-tickets')" id="nav-my-tickets">My Tickets</button>
+        <button onclick="showView('admin')" id="nav-admin">Admin</button>
+        <button onclick="showView('scanner')" id="nav-scanner">Scanner</button>
+      </div>
+    </nav>
+
+    <!-- Events View -->
+    <div id="events-view" class="view active">
+      <div class="view-header">
+        <h2>Available Events</h2>
+        <div class="filters">
+          <select id="category-filter" onchange="filterEvents()">
+            <option value="">All Categories</option>
+            <option value="Concert">Concert</option>
+            <option value="Workshop">Workshop</option>
+            <option value="Sports">Sports</option>
+            <option value="Seminar">Seminar</option>
+            <option value="Party">Party</option>
+            <option value="General">General</option>
+          </select>
+          <input type="text" id="search-filter" placeholder="Search events..." oninput="filterEvents()">
+        </div>
+      </div>
+      <div id="events-list"></div>
+    </div>
+
+    <!-- My Tickets View -->
+    <div id="my-tickets-view" class="view">
+      <h2>My Tickets</h2>
+      <div class="email-lookup">
+        <input type="email" id="lookup-email" placeholder="Enter your email to find tickets">
+        <button onclick="lookupTickets()">Find Tickets</button>
+      </div>
+      <div id="my-tickets-list"></div>
+    </div>
+
+    <!-- Admin Dashboard View -->
+    <div id="admin-view" class="view">
+      <h2>Admin Dashboard</h2>
+      
+      <!-- Dashboard Overview -->
+      <div class="dashboard-overview">
+        <div class="stat-box">
+          <h3 id="total-events">0</h3>
+          <p>Total Events</p>
+        </div>
+        <div class="stat-box">
+          <h3 id="total-tickets">0</h3>
+          <p>Tickets Sold</p>
+        </div>
+        <div class="stat-box">
+          <h3 id="total-revenue">$0</h3>
+          <p>Total Revenue</p>
+        </div>
+        <div class="stat-box">
+          <h3 id="total-checkins">0</h3>
+          <p>Check-ins Today</p>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="tab-btn active" onclick="showAdminTab('create')">Create Event</button>
+        <button class="tab-btn" onclick="showAdminTab('manage')">Manage Events</button>
+        <button class="tab-btn" onclick="showAdminTab('analytics')">Analytics</button>
+      </div>
+
+      <!-- Create Event Tab -->
+      <div id="create-tab" class="admin-tab active">
+        <div class="admin-section">
+          <h3>Create New Event</h3>
+          <form id="create-event-form">
+            <div class="form-row">
+              <input type="text" id="event-name" placeholder="Event Name" required>
+              <select id="event-category" required>
+                <option value="General">General</option>
+                <option value="Concert">Concert</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Sports">Sports</option>
+                <option value="Seminar">Seminar</option>
+                <option value="Party">Party</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <input type="datetime-local" id="event-date" required>
+              <input type="text" id="event-location" placeholder="Location" required>
+            </div>
+            <div class="form-row">
+              <input type="number" id="event-capacity" placeholder="Capacity" min="1" required>
+              <input type="number" id="event-price" placeholder="Price (0 for free)" step="0.01" min="0" required>
+            </div>
+            <textarea id="event-description" placeholder="Event description (optional)" rows="3"></textarea>
+            <button type="submit">Create Event</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Manage Events Tab -->
+      <div id="manage-tab" class="admin-tab">
+        <div class="admin-section">
+          <h3>Manage Events</h3>
+          <div id="manage-events-list"></div>
+        </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div id="analytics-tab" class="admin-tab">
+        <div class="admin-section">
+          <h3>Event Analytics</h3>
+          <select id="analytics-event-select" onchange="loadEventAnalytics()">
+            <option value="">Select an event</option>
+          </select>
+          <div id="analytics-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Scanner View -->
+    <div id="scanner-view" class="view">
+      <h2>QR Code Scanner</h2>
+      <div class="scanner-layout">
+        <div class="scanner-panel">
+          <div class="scanner-mode-toggle">
+            <button class="mode-btn active" onclick="setScannerMode('camera')">📷 Camera</button>
+            <button class="mode-btn" onclick="setScannerMode('manual')">⌨️ Manual</button>
+          </div>
+          
+          <div id="camera-scanner" class="scanner-input">
+            <div id="qr-reader"></div>
+            <p class="scanner-hint">Point camera at QR code</p>
+          </div>
+          
+          <div id="manual-scanner" class="scanner-input" style="display:none;">
+            <input type="text" id="qr-input" placeholder="Enter or paste ticket code" autofocus>
+            <button onclick="verifyTicket()">Verify Ticket</button>
+          </div>
+          
+          <div class="gate-select">
+            <label>Entry Gate:</label>
+            <select id="gate-select">
+              <option value="Main">Main Entrance</option>
+              <option value="VIP">VIP Entrance</option>
+              <option value="Staff">Staff Entrance</option>
+              <option value="Side">Side Entrance</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="scan-results-panel">
+          <h3>Scan Results</h3>
+          <div id="scan-result"></div>
+          <div id="scan-history">
+            <h4>Recent Scans</h4>
+            <ul id="scan-history-list"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ticket Modal -->
+    <div id="ticket-modal" class="modal">
+      <div class="modal-content ticket-modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div id="ticket-details"></div>
+      </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div id="event-modal" class="modal">
+      <div class="modal-content event-modal-content">
+        <span class="close" onclick="closeEventModal()">&times;</span>
+        <div id="event-details"></div>
+      </div>
+    </div>
+
+    <!-- Edit Event Modal -->
+    <div id="edit-modal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h2>Edit Event</h2>
+        <form id="edit-event-form">
+          <input type="hidden" id="edit-event-id">
+          <input type="text" id="edit-event-name" placeholder="Event Name" required>
+          <select id="edit-event-category" required>
+            <option value="General">General</option>
+            <option value="Concert">Concert</option>
+            <option value="Workshop">Workshop</option>
+            <option value="Sports">Sports</option>
+            <option value="Seminar">Seminar</option>
+            <option value="Party">Party</option>
+          </select>
+          <input type="datetime-local" id="edit-event-date" required>
+          <input type="text" id="edit-event-location" placeholder="Location" required>
+          <input type="number" id="edit-event-capacity" placeholder="Capacity" min="1" required>
+          <input type="number" id="edit-event-price" placeholder="Price" step="0.01" min="0" required>
+          <textarea id="edit-event-description" placeholder="Description" rows="3"></textarea>
+          <button type="submit">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Attendees Modal -->
+    <div id="attendees-modal" class="modal">
+      <div class="modal-content wide-modal">
+        <span class="close" onclick="closeAttendeesModal()">&times;</span>
+        <h2>Attendee List</h2>
+        <div id="attendees-list"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
